@@ -1,9 +1,23 @@
 import * as core from '@actions/core'
+import * as exec from '@actions/exec'
 import {wait} from './wait'
-import { execFileSync } from "node:child_process";
 
-async function getDiff(baseRef: string): Promise<string[]> {
-  const buf = execFileSync(
+async function getDiff(baseRef: string, path: string): Promise<string[]> {
+  let myOutput = '';
+  let myError = '';
+
+  const options: exec.ExecOptions = {
+    listeners: {
+      stdout: (data: Buffer) => {
+        myOutput += data.toString();
+      },
+      stderr: (data: Buffer) => {
+        myError += data.toString();
+      }
+    }
+  };
+
+  await exec.getExecOutput(
     'git',
     [
       'diff',
@@ -11,12 +25,13 @@ async function getDiff(baseRef: string): Promise<string[]> {
       '--merge-base',
       baseRef,
       'HEAD',
-      // '--',
-      // 'infra/dashboard/dashboards/*',
+      '--',
+      path,
     ],
+    options,
   )
 
-  return buf.toString().split("\n")
+  return myOutput.toString().split("\n")
 }
 
 async function run(): Promise<void> {
@@ -28,7 +43,11 @@ async function run(): Promise<void> {
     if (br === undefined) {
       throw new Error("set GITHUB_BASE_REF");
     }
-    const files = await getDiff(br)
+    const path = core.getInput('path', {
+      required: true,
+      trimWhitespace: true,
+    });
+    const files = await getDiff(br, path)
     files.forEach(v => {
       core.debug(v)
     })
