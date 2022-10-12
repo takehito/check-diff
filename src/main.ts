@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import * as exec from '@actions/exec'
 import {wait} from './wait'
 
-async function getDiff(baseRef: string, path: string): Promise<string[]> {
+async function getDiff(baseRef: string, path: string[]): Promise<string[]> {
   let myOutput = '';
   let myError = '';
 
@@ -17,17 +17,26 @@ async function getDiff(baseRef: string, path: string): Promise<string[]> {
     }
   };
 
-  await exec.getExecOutput(
-    'git',
-    [
-      'diff',
-      '--name-only',
-      '--merge-base',
-      baseRef,
-      'HEAD',
+  let args = [
+    'diff',
+    '--name-only',
+    '--merge-base',
+    baseRef,
+    'HEAD',
+  ]
+
+  if (path.length > 0) {
+    core.debug(`${path.length}`)
+    args.push(
       '--',
-      path,
-    ],
+      ...path,
+    )
+  }
+  core.debug(`${args}`)
+
+  await exec.getExecOutput(
+    '/usr/bin/git',
+    args,
     options,
   )
 
@@ -43,20 +52,14 @@ async function run(): Promise<void> {
     if (br === undefined) {
       throw new Error("set GITHUB_BASE_REF");
     }
-    const path = core.getInput('path', {
+    const paths = core.getMultilineInput('paths', {
       required: true,
       trimWhitespace: true,
     });
-    const files = await getDiff(br, path)
+    const files = await getDiff(br, paths)
     files.forEach(v => {
       core.debug(v)
     })
-
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
-
-    core.setOutput('time', new Date().toTimeString())
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
