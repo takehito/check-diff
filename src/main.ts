@@ -1,9 +1,9 @@
 import * as core from '@actions/core'
 import {wait} from './wait'
-import { exec, spawn } from "node:child_process";
+import { execFileSync } from "node:child_process";
 
-async function getDiff(baseRef: string, ): Promise<void> {
-  const git = spawn(
+async function getDiff(baseRef: string): Promise<string[]> {
+  const buf = execFileSync(
     'git',
     [
       'diff',
@@ -16,15 +16,7 @@ async function getDiff(baseRef: string, ): Promise<void> {
     ],
   )
 
-  git.stdout.on('data', (data) => {
-    core.debug(`stdout: ${data}`)
-  })
-  git.stderr.on('data', (data) => {
-    core.debug(`stderr: ${data}`)
-  })
-  git.on('close', (status) => {
-    core.debug(`child process exited with code ${status}`)
-  })
+  return buf.toString().split("\n")
 }
 
 async function run(): Promise<void> {
@@ -36,8 +28,10 @@ async function run(): Promise<void> {
     if (br === undefined) {
       throw new Error("set GITHUB_BASE_REF");
     }
-  
-    await getDiff(br)
+    const files = await getDiff(br)
+    files.forEach(v => {
+      core.debug(v)
+    })
 
     core.debug(new Date().toTimeString())
     await wait(parseInt(ms, 10))
