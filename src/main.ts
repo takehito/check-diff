@@ -37,7 +37,9 @@ async function getDiff(baseRef: string, path: string[]): Promise<string[]> {
     options,
   )
 
-  return myOutput.toString().trim().split("\n")
+  return myOutput.toString().trim().split("\n").filter((file): Boolean => { 
+    return file.length > 0
+  })
 }
 
 async function run(): Promise<void> {
@@ -51,7 +53,12 @@ async function run(): Promise<void> {
       trimWhitespace: true,
     });
     const files = await getDiff(br, paths)
-    core.debug(`${files.length}`)
+
+    if (files.length > 0) {
+      core.setOutput('isDiff', true)
+    } else {
+      core.setOutput('isDiff', false)
+    }
   } catch (error) {
     if (error instanceof Error) core.setFailed(error.message)
   }
