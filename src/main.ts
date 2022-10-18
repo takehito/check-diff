@@ -31,15 +31,19 @@ async function getDiff(baseRef: string, path: string[]): Promise<string[]> {
     )
   }
 
-  await exec.getExecOutput(
+  const status = await exec.exec(
     '/usr/bin/git',
     args,
     options,
   )
 
-  return myOutput.toString().trim().split("\n").filter((file): Boolean => { 
-    return file.length > 0
-  })
+  if (status == 0) {
+    return myOutput.toString().trim().split("\n").filter((file): Boolean => { 
+      return file.length > 0
+    })
+  }
+
+  throw new Error(myError)
 }
 
 async function run(): Promise<void> {
